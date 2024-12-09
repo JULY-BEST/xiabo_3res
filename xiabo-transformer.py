@@ -42,7 +42,7 @@ class Module(nn.Module):
 
         self.device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-
+        self.text_view_extract = ASR_model().to(self.device)  # 用于提取特征
 
         # 确保初始化时传递所有所需的参数
         d_k = 64  # Dimension of query/key
