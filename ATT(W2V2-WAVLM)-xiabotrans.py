@@ -19,7 +19,7 @@ class ASR_model(nn.Module):
     def __init__(self):
         super(ASR_model, self).__init__()
         cp_path = os.path.join(
-           "/home/wr/baseline_wr_ssl/xlsr2_300m.pt")  # Change the pre-trained XLSR model path.
+            "/home/wangrui/xlsr2_300m.pt")  # Change the pre-trained XLSR model path.
         model, cfg, task = fairseq.checkpoint_utils.load_model_ensemble_and_task([cp_path])
         self.model = model[0].cuda()
         self.linear = nn.Linear(1024, 128)
@@ -38,7 +38,7 @@ class WavLM_Model(nn.Module):
     def __init__(self):
         super(WavLM_Model, self).__init__()
         # 加载预训练的WavLM模型
-        checkpoint = torch.load("/home/wr/WavLM-Large.pt")  # 替换为你的WavLM模型路径
+        checkpoint = torch.load("/home/wangrui/WavLM-Large.pt")  # 替换为你的WavLM模型路径
         cfg = WavLMConfig(checkpoint['cfg'])  # 获取WavLM的配置
         self.model = WavLM(cfg)  # 创建WavLM模型
         self.model.load_state_dict(checkpoint['model'])  # 加载预训练模型的权重
