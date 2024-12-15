@@ -282,17 +282,8 @@ class Module(nn.Module):
         self.residual_block1 = Residual_block(embed_dim).to(self.device)
         self.residual_block2 = Residual_block(embed_dim).to(self.device)
         self.residual_block3 = Residual_block(embed_dim).to(self.device)
-        self.wav_view_extract=WavLM_Model()
-        # 确保初始化时传递所有所需的参数
-        d_k = 64  # Dimension of query/key
-        d_v = 64  # Dimension of value
-        n_head = 8  # Number of attention heads
-        d_model = 128  # Model embedding dimension
-        n_module = 6  # Number of encoder layers (default)
-        dropout_transformer = 0.1  # Dropout rate
-        self.self_attention = EncoderSelfAttention(input_dim=embed_dim, d_model=d_model,
-                                                   d_k=d_k, d_v=d_v, n_head=n_head,
-                                                   n_module=n_module, dropout_transformer=dropout_transformer).to(self.device)
+        self.wav_view_extract=WavLM_Model().to(self.device) 
+   
 
         # 全连接层
         self.fc = nn.Linear(embed_dim, 2).to(self.device)  # 二分类输出
