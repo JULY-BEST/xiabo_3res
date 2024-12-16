@@ -15,7 +15,8 @@ from .ACRNN import acrnn
 from pytorch_wavelets import DWTForward, DWTInverse
 from models.attention import EncoderSelfAttention
 from .WavLM import WavLM, WavLMConfig
-
+from torchvision.models import resnet18
+from torch.nn.functional import interpolate
 
 class ASR_model(nn.Module):
     def __init__(self):
@@ -79,7 +80,15 @@ class Module(nn.Module):
         super(Module, self).__init__()
 
         self.device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # 加载 ResNet18 并移除分类头
+        self.resnet18 = resnet18(pretrained=True)
+        self.resnet18 = nn.Sequential(*list(self.resnet18.children())[:-2])  # 保留特征提取部分
+        # 输入通道调整（从单通道到 3 通道）
+        self.input_conv = nn.Conv2d(1, 3, kernel_size=3, stride=1, padding=1)
 
+        # 降维：将 ResNet 输出的 512 维映射到 128 维
+        self.feature_reduction = nn.Linear(512, embed_dim)
+        
         # 特征提取部分
         self.text_view_extract = ASR_model().to(self.device)  # 用于提取特征
         self.wav_view_extract = WavLM_Model().to(self.device)
@@ -114,8 +123,27 @@ class Module(nn.Module):
         x2 = out1
 
         x = torch.cat([x1, x2], dim=2)
+ """通过 ResNet18 提取高级特征"""
+        # 调整 concat_view 的形状为 ResNet 输入 (batch_size, channels, height, width)
+        x = x.unsqueeze(1)  # 新增通道维度，形状为 (batch_size, 1, seq_len, feature_dim)
 
+        # 插值调整到 ResNet18 的输入大小 (batch_size, 1, 224, 224)
+        x = interpolate(x, size=(224, 224), mode='bilinear', align_corners=False)
 
+        # 转换单通道到 3 通道
+        x = self.input_conv(x)
+
+        # 使用 ResNet18 提取特征
+        resnet_features = self.resnet18(x)  # 输出形状为 (batch_size, 512, 7, 7)
+
+        # 展平 spatial 维度并将通道数降维到 128
+        resnet_features = resnet_features.mean(dim=[-2, -1])  # 先对 7x7 进行全局平均池化，形状变为 (batch_size, 512)
+        resnet_features = self.feature_reduction(resnet_features)  # 降维，形状变为 (batch_size, 128)
+
+        # 还原到序列形状，假设 seq_len 为 50
+        seq_len = 50  # 根据实际情况设定 seq_len
+        resnet_features = resnet_features.unsqueeze(1).expand(-1, seq_len, -1)  # 形状为 (batch_size, seq_len, 128)
+        x = resnet_features
 
         # 取最后一个时间步的特征
         x = x[:, -1, :]  # (bs, input_dim)
